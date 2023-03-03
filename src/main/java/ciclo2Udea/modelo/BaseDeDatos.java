@@ -6,6 +6,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+
 import org.supercsv.cellprocessor.constraint.NotNull;
 import org.supercsv.cellprocessor.ift.CellProcessor;
 import org.supercsv.io.CsvBeanWriter;
@@ -21,8 +22,8 @@ public class BaseDeDatos {
 
     public BaseDeDatos() {
         this.lsEstudiantes = new ArrayList<>();
-        try(Connection conn = DriverManager.getConnection(URL, USER, CLAVE);
-            Statement stmt = conn.createStatement()) {
+        try (Connection conn = DriverManager.getConnection(URL, USER, CLAVE);
+             Statement stmt = conn.createStatement()) {
             String sql = "CREATE TABLE IF NOT EXISTS estudiantes ("
                     + "cedula INT(12) NOT NULL,"
                     + "nombre VARCHAR(50) NOT NULL,"
@@ -85,123 +86,92 @@ public class BaseDeDatos {
         return result;
     }
 
-    public void modificarEst(String id, modelo est) {
-        for (int i = 0; i < this.lsEstudiantes.size(); i++) {
-            if (this.lsEstudiantes.get(i).getId().equals(id)) {
-                this.lsEstudiantes.get(i).setNombre(est.getNombre());
-                this.lsEstudiantes.get(i).setApellido(est.getApellido());
-                this.lsEstudiantes.get(i).setTelefono(est.getTelefono());
-                this.lsEstudiantes.get(i).setCorreo(est.getCorreo());
-                this.lsEstudiantes.get(i).setPrograma(est.getPrograma());
-                System.out.println("Estudiante modificado");
-            }
+    public void modificarEst(int id, modelo est) {
+        try (Connection conn = DriverManager.getConnection(URL, USER, CLAVE);
+             Statement stmt = conn.createStatement()) {
+            String sql = "UPDATE estudiantes SET "
+                    + "nombre = '" + est.getNombre() + "', "
+                    + "apellido = '" + est.getApellido() + "', "
+                    + "telefono = '" + est.getTelefono() + "', "
+                    + "correo = '" + est.getCorreo() + "', "
+                    + "programa = '" + est.getPrograma() + "' "
+                    + "WHERE cedula = " + id + ";";
+            stmt.executeUpdate(sql);
+            System.out.println("Estudiante modificado");
+            stmt.close();
+        } catch (SQLException e) {
+            System.out.println("Error al modificar el estudiante");
         }
     }
 
     public void eliminar(int id) {
-        for (int i = 0; i < this.lsEstudiantes.size(); i++) {
-            if (this.lsEstudiantes.get(i).getId().equals(id)) {
-                this.lsEstudiantes.remove(i);
-                System.out.println("Estudiante eliminado");
-            }
+        try (Connection conn = DriverManager.getConnection(URL, USER, CLAVE);
+             Statement stmt = conn.createStatement()) {
+            String sql = "DELETE FROM estudiantes WHERE cedula = " + id + ";";
+            stmt.executeUpdate(sql);
+            System.out.println("Estudiante eliminado");
+            stmt.close();
+        } catch (SQLException e) {
+            System.out.println("Error al eliminar el estudiante");
         }
     }
 
-    // Trabajamos con archivos .dat
-    public void guardarArchivo() {
+    public void SQLtoList() {
+        ArrayList<modelo> temporal = new ArrayList<>();
         try {
-            FileOutputStream archivo = new FileOutputStream("src\\main\\estudiantes.dat"); //crea el archivo externo
-            ObjectOutputStream salida = new ObjectOutputStream(archivo); // crea un lector de objetos que lee el archivo externo
-
-            salida.writeObject(this.lsEstudiantes);
-            salida.close();
-            archivo.close();
-//            for (int i = 0; i < this.lsEstudiantes.size(); i++) { // recorre la lista de estudiantes
-//                modelo est = this.lsEstudiantes.get(i); // obtiene el estudiante de la lista
-//                salida.writeObject(est); // escribe el estudiante en el archivo externo
-//            }
-        } catch (FileNotFoundException e) {
-            System.out.println("No se pudo crear o encontrar el archivo");
-        } catch (IOException e) {
-            System.out.println("Hubo un error en el sistema");
-            e.printStackTrace();
+            Connection conn = DriverManager.getConnection(URL, USER, CLAVE);
+            Statement stmt = conn.createStatement();
+            String sql = "SELECT * FROM estudiantes;";
+            var rs = stmt.executeQuery(sql);
+            while (rs.next()) {
+                int id = rs.getInt("cedula");
+                String nombre = rs.getString("nombre");
+                String apellido = rs.getString("apellido");
+                String telefono = rs.getString("telefono");
+                String correo = rs.getString("correo");
+                String programa = rs.getString("programa");
+                modelo est = new modelo(Integer.toString(id), nombre, apellido, telefono, correo, programa);
+                temporal.add(est);
+            }
+            rs.close();
+            stmt.close();
+        } catch (SQLException e) {
+            System.out.println("Error al cargar la lista");
         }
+        this.lsEstudiantes = temporal;
     }
 
-    public void recuperarArchivo() throws ClassNotFoundException  {
-        try {
-            FileInputStream archivo = new FileInputStream("src\\main\\estudiantes.dat");
-            ObjectInputStream entrada = new ObjectInputStream(archivo);
+    public void exportarCSV() {
+        String csvFilePath = "Infoestudiantes.csv";
 
-            this.lsEstudiantes = (ArrayList) entrada.readObject();
-            entrada.close();
-            archivo.close();
-        } catch (FileNotFoundException e) {
-            System.out.println("No se pudo crear o encontrar el archivo");
-        } catch (IOException e) {
-            System.out.println("Hubo un error en el sistema");
-        }
-//        catch (ClassNotFoundException e) {
-//            throw new RuntimeException(e);
-//        }
-    }
+        try (Connection conn = DriverManager.getConnection(URL, USER, CLAVE);
+             Statement stmt = conn.createStatement()) {
+            String sql = "SELECT * FROM estudiantes;";
+            var rs = stmt.executeQuery(sql);
+            BufferedWriter lapiz = new BufferedWriter(new FileWriter(csvFilePath));
 
-    // Trabajamos con archivos .csv
-    public void guardarCVS() {
-        String csvFileName = "archivoCSV.csv";
-        ICsvBeanWriter beanWriter = null;
-        CellProcessor[] procesador = new CellProcessor[]{
-            new NotNull(), //ID
-            new NotNull(), //Nombre
-            new NotNull(), //Apellido
-            new NotNull(), //Telefono
-            new NotNull(), //Correo
-            new NotNull(), //Programa
-        };
-        try {
-            beanWriter = new CsvBeanWriter(new FileWriter(csvFileName), CsvPreference.STANDARD_PREFERENCE);
-            String[] header = {"ID", "Nombre", "Apellido", "Telefono", "Correo", "Programa"};
-            beanWriter.writeHeader(header);
+            lapiz.write("cedula,nombre,apellido,telefono,correo,programa");
 
-            for (modelo estudiantes : this.lsEstudiantes) {
-                beanWriter.write(estudiantes, header, procesador);
+            while (rs.next()) {
+                int id = rs.getInt("cedula");
+                String nombre = rs.getString("nombre");
+                String apellido = rs.getString("apellido");
+                String telefono = rs.getString("telefono");
+                String correo = rs.getString("correo");
+                String programa = rs.getString("programa");
+                lapiz.newLine();
+                lapiz.write(id + "," + nombre + "," + apellido + "," + telefono + "," + correo + "," + programa);
             }
+            lapiz.close();
+            rs.close();
+            stmt.close();
 
-            System.out.println("Archivo CSV creado");
-        } catch (IOException e) {
-            System.out.println("Error al crear el archivo CSV");
-        } finally {
-            if (beanWriter != null) {
-                try {
-                    beanWriter.close();
-                } catch (IOException e) {
-                    System.out.println("Error al cerrar el archivo CSV");
-                }
-            }
+            System.out.println("Exportado a CSV exitosamente");
+        } catch (SQLException | IOException e) {
+            System.out.println("Error al exportar a CSV");
         }
-    }
 
-    public void leerCSV() throws FileNotFoundException {
-        String line1 = null; // Ignorando la primera linea
-        String splitBy = ","; // Delimitador es una coma
-        try {
-            BufferedReader br = new BufferedReader(new FileReader("archivoCSV.csv"));
-            br.readLine();
-            while ((line1 = br.readLine()) != null) {
-                String[] estudiante = line1.split(splitBy);
-                String ID = estudiante[0];
-                String nombre = estudiante[1];
-                String apellido = estudiante[2];
-                String telefono = estudiante[3];
-                String correo = estudiante[4];
-                String programa = estudiante[5];
-                modelo student = new modelo(ID, nombre, apellido, telefono, correo, programa);
-                this.lsEstudiantes.add(student);
-            }
-        } catch (IOException e) {
-            System.out.println("Error al leer el archivo CSV");
-            e.printStackTrace();
-        }
+
     }
 
     @Override

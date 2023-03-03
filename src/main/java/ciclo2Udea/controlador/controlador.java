@@ -5,6 +5,7 @@ import ciclo2Udea.modelo.modelo;
 import ciclo2Udea.vista.vista1;
 import ciclo2Udea.vista.vista2;
 import ciclo2Udea.vista.vista3;
+
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.IOException;
@@ -14,6 +15,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.swing.JOptionPane;
 import javax.swing.table.DefaultTableModel;
+
 import vista.vista4;
 import vista.vista5;
 
@@ -53,8 +55,6 @@ public class controlador implements ActionListener {
     }
 
     public void iniciar() throws IOException {
-        //db.recuperarArchivo();
-        db.leerCSV();
         menu.setVisible(true);
     }
 
@@ -69,7 +69,7 @@ public class controlador implements ActionListener {
         }
 
         if (e.getSource() == menu.getBtn_eliminar()) {
-            int idElim = Integer.parseInt( JOptionPane.showInputDialog(menu, "Ingrese el id del estudiante a eliminar", "Eliminar Estudiante", 2));
+            int idElim = Integer.parseInt(JOptionPane.showInputDialog(menu, "Ingrese el id del estudiante a eliminar", "Eliminar Estudiante", 2));
             eliminar(idElim);
         }
 
@@ -89,8 +89,7 @@ public class controlador implements ActionListener {
             menu.dispose();
         }
         if (e.getSource() == menu.getBtn_salir()) {
-            //db.guardarArchivo();
-            db.guardarCVS();
+            db.exportarCSV();
             System.exit(0);
         }
 
@@ -147,27 +146,44 @@ public class controlador implements ActionListener {
     public void buscar() {
         int id = Integer.parseInt(buscar.getTxt_cedula().getText());
         modelo resultado = db.buscarEstudiante(id);
-        buscar.getTxt_nombre().setText(resultado.getNombre());
-        buscar.getTxt_apellido().setText(resultado.getApellido());
-        buscar.getTxt_telefono().setText(resultado.getTelefono());
-        buscar.getTxt_correo().setText(resultado.getCorreo());
-        buscar.getTxt_programa().setText(resultado.getPrograma());
+        // limpia los campos
+        buscar.getTxt_nombre().setText("");
+        buscar.getTxt_apellido().setText("");
+        buscar.getTxt_telefono().setText("");
+        buscar.getTxt_correo().setText("");
+        buscar.getTxt_programa().setText("");
+
+        if (resultado != null) {
+            buscar.getTxt_nombre().setText(resultado.getNombre());
+            buscar.getTxt_apellido().setText(resultado.getApellido());
+            buscar.getTxt_telefono().setText(resultado.getTelefono());
+            buscar.getTxt_correo().setText(resultado.getCorreo());
+            buscar.getTxt_programa().setText(resultado.getPrograma());
+        } else {
+            JOptionPane.showMessageDialog(null, "Estudiante no encontrado");
+        }
+
 
     }
 
     public void mod_buscar() {
-        int id = Integer.parseInt( modificar.getTxt_cedula().getText());
+        int id = Integer.parseInt(modificar.getTxt_cedula().getText());
         modelo resultado = db.buscarEstudiante(id);
-        modificar.getTxt_nombre().setText(resultado.getNombre());
-        modificar.getTxt_apellido().setText(resultado.getApellido());
-        modificar.getTxt_telefono().setText(resultado.getTelefono());
-        modificar.getTxt_correo().setText(resultado.getCorreo());
-        modificar.getTxt_programa().setText(resultado.getPrograma());
+
+        if (resultado != null) {
+            modificar.getTxt_nombre().setText(resultado.getNombre());
+            modificar.getTxt_apellido().setText(resultado.getApellido());
+            modificar.getTxt_telefono().setText(resultado.getTelefono());
+            modificar.getTxt_correo().setText(resultado.getCorreo());
+            modificar.getTxt_programa().setText(resultado.getPrograma());
+        } else {
+            JOptionPane.showMessageDialog(null, "Estudiante no encontrado");
+        }
 
     }
 
     public void modificar() {
-        String id = modificar.getTxt_cedula().getText();
+        int id = Integer.parseInt(modificar.getTxt_cedula().getText());
         String nombre = modificar.getTxt_nombre().getText();
         String apellido = modificar.getTxt_apellido().getText();
         String telefono = modificar.getTxt_telefono().getText();
@@ -177,7 +193,7 @@ public class controlador implements ActionListener {
         if ("".equals(nombre) || "".equals(apellido) || "".equals(telefono) || "".equals(correo) || "".equals(programa)) {
             JOptionPane.showMessageDialog(null, "Debe llenar todos los campos");
         } else {
-            modelo nuevoEst = new modelo(id, nombre, apellido, telefono, correo, programa);
+            modelo nuevoEst = new modelo(Integer.toString(id), nombre, apellido, telefono, correo, programa);
             db.modificarEst(id, nuevoEst);
             JOptionPane.showMessageDialog(null, "Estudiante modificado");
             // Limpiar los campos
@@ -195,26 +211,29 @@ public class controlador implements ActionListener {
         if (estudiante != null) {
             db.eliminar(id);
             JOptionPane.showMessageDialog(menu, "Registro eliminado correctamente", "All ok", 0);
+        } else {
+            JOptionPane.showMessageDialog(menu, "No se encontro el estudiante por el id " + id, "Error", 0);
         }
 
     }
 
     public void listar() {
+        db.SQLtoList();
         ArrayList<modelo> Estudiantes = db.getLsEstudiantes();
         ArrayList<Object[]> list = new ArrayList();
         for (int i = 0; i < Estudiantes.size(); i++) {
             list.add(new Object[]{
-                Estudiantes.get(i).getId(),
-                Estudiantes.get(i).getNombre(),
-                Estudiantes.get(i).getApellido(),
-                Estudiantes.get(i).getTelefono(),
-                Estudiantes.get(i).getCorreo(),
-                Estudiantes.get(i).getPrograma()
+                    Estudiantes.get(i).getId(),
+                    Estudiantes.get(i).getNombre(),
+                    Estudiantes.get(i).getApellido(),
+                    Estudiantes.get(i).getTelefono(),
+                    Estudiantes.get(i).getCorreo(),
+                    Estudiantes.get(i).getPrograma()
             });
             listar.getjTable1().setModel(new DefaultTableModel(
                     list.toArray(new Object[list.size()][]),
                     new String[]{
-                        "ID", "Nombre", "Apellido", "Telefono", "Correo", "Programa"
+                            "ID", "Nombre", "Apellido", "Telefono", "Correo", "Programa"
                     }
             ));
         }
