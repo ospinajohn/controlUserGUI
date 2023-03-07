@@ -16,9 +16,16 @@ import org.supercsv.prefs.CsvPreference;
 public class BaseDeDatos {
 
     private ArrayList<modelo> lsEstudiantes;
-    public static final String URL = "jdbc:mysql://localhost:3306/ciclo2";
-    public static final String USER = "root";
-    public static final String CLAVE = "";
+    public static final String URL = "jdbc:mysql://mintic.mysql.database.azure.com:3306/ciclo2?useSSL=true";
+    public static final String USER = "estudiante";
+    public static final String CLAVE = "mintic2023.";
+
+
+
+    //LOCALHOTS LOCAL
+    //public static final String URL = "jdbc:mysql://localhost:3306/ciclo2";
+    //public static final String USER = "root";
+    //public static final String CLAVE = "";
 
     public BaseDeDatos() {
         this.lsEstudiantes = new ArrayList<>();
